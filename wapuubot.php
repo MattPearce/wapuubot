@@ -110,6 +110,11 @@ function wapuubot_handle_chat( $request ) {
 
         // Automatically discover and use ALL registered abilities!
         $abilities = wp_get_abilities();
+        
+        // Debug: Log discovered abilities
+        $ability_names = array_map( function( $a ) { return $a->get_name(); }, $abilities );
+        error_log( 'Wapuubot: Discovered abilities: ' . implode( ', ', $ability_names ) );
+
         if ( ! empty( $abilities ) ) {
             $builder->using_abilities( ...$abilities );
         }
