@@ -40,18 +40,10 @@ Wapuubot lives in your dashboard as a friendly chat bubble. It uses the **WordPr
 *   An API Key for an AI Provider (OpenAI, Anthropic, etc.)
 
 ### Setup
-1.  Clone this repository into your `wp-content/plugins/` directory:
-    ```bash
-    git clone https://github.com/yourusername/wapuubot.git
-    cd wapuubot
-    ```
-2.  Install dependencies via Composer:
-    ```bash
-    composer install
-    ```
-3.  Activate the **Wapuubot** plugin in WordPress.
-4.  Navigate to **Settings > AI Credentials** in your WordPress Admin.
-5.  Enter your API Key (e.g., OpenAI Key) and save.
+1.  Download latest release and unzip in your `wp-content/plugins/` directory:
+2.  Activate the **Wapuubot** plugin in WordPress.
+3.  Navigate to **Settings > AI Credentials** in your WordPress Admin.
+4.  Enter your API Key (e.g., OpenAI Key) and save.
 
 ## 💡 Usage
 
