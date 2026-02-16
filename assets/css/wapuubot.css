@@ -1,0 +1,227 @@
+#wapuubot-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+#wapuubot-bubble {
+    width: 60px;
+    height: 60px;
+    background-color: #f0f0f1;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+    overflow: hidden;
+    border: 2px solid #fff;
+}
+
+#wapuubot-bubble:hover {
+    transform: scale(1.1);
+}
+
+#wapuubot-bubble img {
+    width: 100%;
+    height: auto;
+}
+
+#wapuubot-chat-window {
+    display: none;
+    position: absolute;
+    bottom: 80px;
+    right: 0;
+    width: 300px;
+    height: 400px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    flex-direction: column;
+    border: 1px solid #e0e0e0;
+}
+
+#wapuubot-chat-window.open {
+    display: flex;
+}
+
+#wapuubot-header {
+    background-color: #2271b1;
+    color: #fff;
+    padding: 10px 15px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#wapuubot-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#wapuubot-clear, #wapuubot-close {
+    cursor: pointer;
+    font-size: 18px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+}
+
+#wapuubot-clear:hover, #wapuubot-close:hover {
+    opacity: 1;
+}
+
+#wapuubot-clear {
+    font-size: 16px;
+}
+
+#wapuubot-messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wapuubot-message {
+    padding: 8px 12px;
+    border-radius: 12px;
+    max-width: 80%;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.wapuubot-message.bot {
+    background-color: #f0f0f1;
+    align-self: flex-start;
+    border-bottom-left-radius: 2px;
+}
+
+.wapuubot-message.user {
+    background-color: #2271b1;
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
+}
+
+/* Markdown Styles within messages */
+.wapuubot-message h1, 
+.wapuubot-message h2, 
+.wapuubot-message h3 {
+    margin: 10px 0 5px 0;
+    line-height: 1.2;
+    color: inherit;
+}
+
+.wapuubot-message h1 { font-size: 1.4em; }
+.wapuubot-message h2 { font-size: 1.2em; }
+.wapuubot-message h3 { font-size: 1.1em; }
+
+.wapuubot-message strong {
+    font-weight: bold;
+}
+
+.wapuubot-message em {
+    font-style: italic;
+}
+
+.wapuubot-message code {
+    background-color: rgba(0, 0, 0, 0.1);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+.wapuubot-message pre {
+    background-color: #f6f7f7;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 5px 0;
+}
+
+.wapuubot-message ul, .wapuubot-message ol {
+    margin: 5px 0 5px 20px;
+    padding: 0;
+}
+
+.wapuubot-message li {
+    margin-bottom: 2px;
+}
+
+#wapuubot-input-area {
+    padding: 10px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 10px;
+}
+
+#wapuubot-input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+#wapuubot-send {
+    background-color: #2271b1;
+    color: #fff;
+    border: none;
+    padding: 0 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+#wapuubot-send:hover {
+    background-color: #135e96;
+}
+
+/* Thinking Throbber */
+.wapuubot-thinking {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    background-color: #f0f0f1;
+    align-self: flex-start;
+    border-radius: 12px;
+    border-bottom-left-radius: 2px;
+    margin-bottom: 10px;
+}
+
+.wapuubot-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #8c8f94;
+    border-radius: 50%;
+    animation: wapuubot-bounce 1.4s infinite ease-in-out both;
+}
+
+.wapuubot-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.wapuubot-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes wapuubot-bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}

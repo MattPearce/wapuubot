@@ -1,0 +1,13 @@
+.git/*
+.gitignore
+.distignore
+.editorconfig
+.wp-env.json
+package.json
+package-lock.json
+node_modules/*
+tests/*
+phpunit.xml.dist
+composer.json
+composer.lock
+docs/screenshots/*

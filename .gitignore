@@ -1,0 +1,12 @@
+# WordPress Environment
+.wp-env.json
+wp-content/
+!wp-content/plugins/wapuubot
+
+# Dependencies
+node_modules/
+vendor/
+
+# System
+.DS_Store
+*.log
