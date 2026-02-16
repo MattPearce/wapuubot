@@ -37,6 +37,18 @@ function wapuubot_init() {
     // Load Abilities
     require_once plugin_dir_path( __FILE__ ) . 'abilities/posts.php';
     require_once plugin_dir_path( __FILE__ ) . 'abilities/categories.php';
+    
+    // Ensure abilities are registered if the hook hasn't fired yet
+    if ( did_action( 'init' ) ) {
+        do_action( 'wp_abilities_api_init' );
+    }
+
+    // Load Engine
+    require_once plugin_dir_path( __FILE__ ) . 'includes/class-wapuubot-engine.php';
+
+    // Load Telegram Bridge
+    require_once plugin_dir_path( __FILE__ ) . 'includes/class-wapuubot-telegram.php';
+    Wapuubot_Telegram::init();
 }
 add_action( 'init', 'wapuubot_init' );
 
@@ -62,6 +74,201 @@ function wapuubot_register_rest_routes() {
 }
 add_action( 'rest_api_init', 'wapuubot_register_rest_routes' );
 
+function wapuubot_admin_menu() {
+    add_options_page(
+        'Wapuubot Settings',
+        'Wapuubot',
+        'manage_options',
+        'wapuubot',
+        'wapuubot_settings_page'
+    );
+}
+add_action( 'admin_menu', 'wapuubot_admin_menu' );
+
+function wapuubot_register_settings() {
+    register_setting( 'wapuubot_settings', 'wapuubot_telegram_token' );
+    register_setting( 'wapuubot_settings', 'wapuubot_telegram_allowed_users' );
+    register_setting( 'wapuubot_settings', 'wapuubot_telegram_pairing_mode' );
+
+    add_settings_section(
+        'wapuubot_telegram_section',
+        'Telegram Bridge Settings',
+        null,
+        'wapuubot'
+    );
+
+    add_settings_field(
+        'wapuubot_telegram_token',
+        'Telegram Bot Token',
+        'wapuubot_telegram_token_callback',
+        'wapuubot',
+        'wapuubot_telegram_section'
+    );
+
+    add_settings_field(
+        'wapuubot_telegram_pairing_mode',
+        'Pairing Mode',
+        'wapuubot_telegram_pairing_mode_callback',
+        'wapuubot',
+        'wapuubot_telegram_section'
+    );
+
+    add_settings_field(
+        'wapuubot_telegram_allowed_users',
+        'Allowed Telegram Users',
+        'wapuubot_telegram_allowed_users_callback',
+        'wapuubot',
+        'wapuubot_telegram_section'
+    );
+}
+add_action( 'admin_init', 'wapuubot_register_settings' );
+
+function wapuubot_telegram_token_callback() {
+    $token = get_option( 'wapuubot_telegram_token' );
+    echo '<input type="text" name="wapuubot_telegram_token" value="' . esc_attr( $token ) . '" class="regular-text" />';
+    echo '<p class="description">Enter your Telegram Bot Token from @BotFather.</p>';
+}
+
+function wapuubot_telegram_pairing_mode_callback() {
+    $pairing = get_option( 'wapuubot_telegram_pairing_mode' );
+    echo '<label><input type="checkbox" name="wapuubot_telegram_pairing_mode" value="1" ' . checked( 1, $pairing, false ) . ' /> Enable Pairing Mode</label>';
+    echo '<p class="description">When enabled, new users who message the bot will be automatically authorized.</p>';
+}
+
+function wapuubot_telegram_allowed_users_callback() {
+    $users = get_option( 'wapuubot_telegram_allowed_users' );
+    echo '<input type="text" name="wapuubot_telegram_allowed_users" value="' . esc_attr( $users ) . '" class="regular-text" />';
+    echo '<p class="description">Comma-separated list of Telegram usernames (@user) or IDs allowed. You can manage these in the Connections panel below.</p>';
+}
+
+function wapuubot_settings_page() {
+    // Handle actions
+    if ( isset( $_GET['action'] ) && isset( $_GET['user_id'] ) && check_admin_referer( 'wapuubot_connection_action' ) ) {
+        $user_id = sanitize_text_field( $_GET['user_id'] );
+        $pending = get_option( 'wapuubot_pending_connections', array() );
+        
+        if ( $_GET['action'] === 'approve' ) {
+            $allowed_users = get_option( 'wapuubot_telegram_allowed_users', '' );
+            $allowed_array = array_filter( array_map( 'trim', explode( ',', $allowed_users ) ) );
+            if ( ! in_array( $user_id, $allowed_array ) ) {
+                $allowed_array[] = $user_id;
+                update_option( 'wapuubot_telegram_allowed_users', implode( ', ', $allowed_array ) );
+            }
+            unset( $pending[$user_id] );
+        } elseif ( $_GET['action'] === 'ignore' ) {
+            unset( $pending[$user_id] );
+        }
+        update_option( 'wapuubot_pending_connections', $pending );
+        wp_redirect( admin_url( 'options-general.php?page=wapuubot&settings-updated=true' ) );
+        exit;
+    }
+
+    ?>
+    <div class="wrap">
+        <h1>Wapuubot Settings</h1>
+        
+        <div class="welcome-panel" style="padding: 20px; display: flex; align-items: center; gap: 30px;">
+            <div class="welcome-panel-content">
+                <h2>Connect to Wapuubot</h2>
+                <p>Scan the QR code or click the link to start chatting with your bot on Telegram.</p>
+                <?php
+                $token = get_option( 'wapuubot_telegram_token' );
+                if ( $token ) {
+                    $bot_username = Wapuubot_Telegram::get_bot_username();
+                    if ( $bot_username ) {
+                        $bot_url = 'https://t.me/' . $bot_username;
+                        echo '<p><a href="' . esc_url( $bot_url ) . '" class="button button-primary" target="_blank">Open @' . esc_html( $bot_username ) . '</a></p>';
+                        echo '<p><small>Username: @' . esc_html( $bot_username ) . '</small></p>';
+                    } else {
+                        echo '<p><strong>1.</strong> Find your bot on Telegram.</p>';
+                        echo '<p><strong>2.</strong> Send <code>/start</code>.</p>';
+                        echo '<p><strong>3.</strong> Approve the connection in the panel below.</p>';
+                    }
+                }
+                ?>
+            </div>
+            <?php if ( $token && isset($bot_url) ) : ?>
+                <div style="text-align: center;">
+                    <img src="<?php echo esc_url( 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode( $bot_url ) ); ?>" alt="Bot QR Code" style="border: 1px solid #ccc; padding: 5px; background: #fff;" />
+                </div>
+            <?php elseif ( $token ) : ?>
+                <div style="text-align: center;">
+                    <img src="<?php echo esc_url( plugin_dir_url( __FILE__ ) . 'assets/images/wapuu.svg' ); ?>" style="width: 100px; height: auto;" />
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <form method="post" action="options.php">
+            <?php
+            settings_fields( 'wapuubot_settings' );
+            do_settings_sections( 'wapuubot' );
+            submit_button();
+            ?>
+        </form>
+
+        <hr />
+
+        <h2>Connections</h2>
+        <table class="wp-list-table widefat fixed striped">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $pending = get_option( 'wapuubot_pending_connections', array() );
+                $allowed_users = get_option( 'wapuubot_telegram_allowed_users', '' );
+                $allowed_array = array_filter( array_map( 'trim', explode( ',', $allowed_users ) ) );
+
+                if ( empty( $pending ) && empty( $allowed_array ) ) {
+                    echo '<tr><td colspan="3">No connection attempts yet.</td></tr>';
+                } else {
+                    // Show Pending
+                    foreach ( $pending as $id => $data ) {
+                        $name = isset( $data['first_name'] ) ? $data['first_name'] : '';
+                        $username = isset( $data['username'] ) ? ' (@' . $data['username'] . ')' : '';
+                        echo '<tr>';
+                        echo '<td><strong>' . esc_html( $name . $username ) . '</strong><br/><small>ID: ' . esc_html( $id ) . '</small></td>';
+                        echo '<td><span class="status-waiting" style="color: #d63638;">Pending</span></td>';
+                        echo '<td>';
+                        $approve_url = wp_nonce_url( admin_url( 'options-general.php?page=wapuubot&action=approve&user_id=' . $id ), 'wapuubot_connection_action' );
+                        $ignore_url = wp_nonce_url( admin_url( 'options-general.php?page=wapuubot&action=ignore&user_id=' . $id ), 'wapuubot_connection_action' );
+                        echo '<a href="' . esc_url( $approve_url ) . '" class="button button-primary">Approve</a> ';
+                        echo '<a href="' . esc_url( $ignore_url ) . '" class="button">Ignore</a>';
+                        echo '</td>';
+                        echo '</tr>';
+                    }
+                    // Show Approved (Simplified)
+                    foreach ( $allowed_array as $user ) {
+                        echo '<tr>';
+                        echo '<td><strong>' . esc_html( $user ) . '</strong></td>';
+                        echo '<td><span class="status-approved" style="color: #46b450;">Authorized</span></td>';
+                        echo '<td><small>To remove, edit the Allowed Users field above.</small></td>';
+                        echo '</tr>';
+                    }
+                }
+                ?>
+            </tbody>
+        </table>
+
+        <hr />
+        <h2>Webhook Status</h2>
+        <?php
+        if ( $token ) {
+            $webhook_url = rest_url( 'wapuubot/v1/telegram-webhook' );
+            echo '<p>Your Webhook URL is: <code>' . esc_url( $webhook_url ) . '</code></p>';
+            echo '<p><a href="' . esc_url( 'https://api.telegram.org/bot' . $token . '/setWebhook?url=' . $webhook_url ) . '" class="button" target="_blank">Set Webhook</a></p>';
+        } else {
+            echo '<p>Please enter a bot token first.</p>';
+        }
+        ?>
+    </div>
+    <?php
+}
+
 // Ability Registration is now handled in abilities/posts.php and abilities/categories.php
 
 function wapuubot_handle_chat( $request ) {
@@ -74,127 +281,13 @@ function wapuubot_handle_chat( $request ) {
 		return new WP_REST_Response( array( 'response' => 'I didn\'t catch that. Could you repeat it?' ), 400 );
 	}
 
-	if ( ! class_exists( AI_Client::class ) ) {
-		return new WP_REST_Response( array( 'response' => 'AI Client library is not installed or initialized.' ), 500 );
-	}
-
 	try {
-		$builder = AI_Client::prompt( $message );
-
-		if ( ! empty( $history ) ) {
-			$history_messages = array();
-			foreach ( $history as $msg_data ) {
-				try {
-					$history_messages[] = Message::fromArray( $msg_data );
-				} catch ( Exception $e ) {
-					continue;
-				}
-			}
-			if ( ! empty( $history_messages ) ) {
-				$builder->with_history( ...$history_messages );
-			}
-		}
-
-		$system_instruction = 'You are Wapuubot, a helpful WordPress assistant. ' .
-			'You can manage the site by calling functions (abilities). ';
-
-		if ( ! empty( $context['postId'] ) ) {
-			$system_instruction .= 'The user is currently viewing/editing post ID ' . $context['postId'] . '. ';
-		}
-
-		$system_instruction .= "Use available abilities to fulfill the user's request. " .
-            "If you need a post ID but don't have it, use the 'search-posts' ability to find it by title. " .
-			"IMPORTANT: When you call a function, I will return the result to you. Use that result to answer the user's question.";
-
-		$builder->using_system_instruction( $system_instruction );
-
-        // Automatically discover and use ALL registered abilities!
-        $abilities = wp_get_abilities();
-        
-        // Debug: Log discovered abilities
-        $ability_names = array_map( function( $a ) { return $a->get_name(); }, $abilities );
-        error_log( 'Wapuubot: Discovered abilities: ' . implode( ', ', $ability_names ) );
-
-        if ( ! empty( $abilities ) ) {
-            $builder->using_abilities( ...$abilities );
-        }
-
-        // Initialize history tracking for this session
-        $current_turn_history = array();
-        if ( ! empty( $history_messages ) ) {
-            $current_turn_history = array_merge( $current_turn_history, $history_messages );
-        }
-        // Add current user prompt to history tracking
-        $current_turn_history[] = new Message( MessageRoleEnum::user(), array( new MessagePart( $message ) ) );
-
-		error_log( 'Wapuubot: generating initial result...' );
-		$result = $builder->generate_result();
-		$message_obj = $result->toMessage();
-
-        $max_turns = 5; // Prevent infinite loops
-        $turns = 0;
-        $action_performed = false;
-
-        // Loop as long as the model wants to call tools
-		while ( Ability_Function_Resolver::has_ability_calls( $message_obj ) && $turns < $max_turns ) {
-            $turns++;
-            error_log( "Wapuubot: Turn $turns - Detected ability calls. Executing..." );
-            
-            // Add the model's call message to history
-            $current_turn_history[] = $message_obj;
-            
-            // Execute abilities manually to handle multiple calls as separate messages
-            $response_messages = array();
-            foreach ( $message_obj->getParts() as $part ) {
-                if ( $part->getFunctionCall() ) {
-                    $call = $part->getFunctionCall();
-                    if ( Ability_Function_Resolver::is_ability_call( $call ) ) {
-                        $function_response = Ability_Function_Resolver::execute_ability( $call );
-                        // Create a separate message for EACH function response
-                        $response_messages[] = new Message( 
-                            MessageRoleEnum::user(), 
-                            array( new MessagePart( $function_response ) ) 
-                        );
-                    }
-                }
-            }
-            
-            if ( empty( $response_messages ) ) {
-                // Should not happen if has_ability_calls was true
-                break;
-            }
-
-            $action_performed = true;
-
-            // Add all response messages to history
-            foreach ( $response_messages as $msg ) {
-                $current_turn_history[] = $msg;
-            }
-            
-            // Use the LAST response message as the prompt for the next turn
-            $last_response_message = array_pop( $current_turn_history );
-            
-            $builder = AI_Client::prompt( $last_response_message );
-            $builder->using_system_instruction( $system_instruction );
-            if ( ! empty( $abilities ) ) {
-                $builder->using_abilities( ...$abilities );
-            }
-            
-            $builder->with_history( ...$current_turn_history );
-            
-            $result = $builder->generate_result();
-            $message_obj = $result->toMessage();
-            
-            // Add the last response back to history for the next iteration (if any)
-            $current_turn_history[] = $last_response_message;
-		}
-
-        $response_text = $result->toText();
+        $result = Wapuubot_Engine::process_chat( $message, $history, $context );
 
 		return new WP_REST_Response(
 			array(
-				'response'         => $response_text,
-				'action_performed' => $action_performed,
+				'response'         => $result['response'],
+				'action_performed' => $result['action_performed'],
 			),
 			200
 		);
