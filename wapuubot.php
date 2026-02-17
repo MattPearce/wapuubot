@@ -25,23 +25,18 @@ function wapuubot_init() {
 
 	require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 
-	if ( class_exists( AI_Client::class ) ) {
-		AI_Client::init();
-	}
-    
     // Manually bootstrap Abilities API if not active as plugin
     if ( ! defined( 'WP_ABILITIES_API_VERSION' ) && file_exists( plugin_dir_path( __FILE__ ) . 'vendor/wordpress/abilities-api/abilities-api.php' ) ) {
         require_once plugin_dir_path( __FILE__ ) . 'vendor/wordpress/abilities-api/abilities-api.php';
     }
 
-    // Load Abilities
-    require_once plugin_dir_path( __FILE__ ) . 'abilities/posts.php';
-    require_once plugin_dir_path( __FILE__ ) . 'abilities/categories.php';
-    
-    // Ensure abilities are registered if the hook hasn't fired yet
-    if ( did_action( 'init' ) ) {
-        do_action( 'wp_abilities_api_init' );
-    }
+    // Register abilities on the correct hooks
+    add_action( 'wp_abilities_api_categories_init', 'wapuubot_register_categories' );
+    add_action( 'wp_abilities_api_init', 'wapuubot_register_all_abilities' );
+
+	if ( class_exists( AI_Client::class ) ) {
+		AI_Client::init();
+	}
 
     // Load Engine
     require_once plugin_dir_path( __FILE__ ) . 'includes/class-wapuubot-engine.php';
@@ -50,7 +45,23 @@ function wapuubot_init() {
     require_once plugin_dir_path( __FILE__ ) . 'includes/class-wapuubot-telegram.php';
     Wapuubot_Telegram::init();
 }
-add_action( 'init', 'wapuubot_init' );
+add_action( 'init', 'wapuubot_init', 0 );
+
+function wapuubot_register_categories() {
+    error_log( 'Wapuubot: Registering categories...' );
+    wp_register_ability_category( 'wapuubot', array(
+        'label'       => 'Wapuubot',
+        'description' => 'Abilities for the Wapuubot assistant.',
+    ) );
+}
+
+function wapuubot_register_all_abilities() {
+    error_log( 'Wapuubot: Registering abilities...' );
+    require_once plugin_dir_path( __FILE__ ) . 'abilities/posts.php';
+    require_once plugin_dir_path( __FILE__ ) . 'abilities/categories.php';
+    wapuubot_register_post_abilities();
+    wapuubot_register_category_abilities();
+}
 
 function wapuubot_enqueue_scripts() {
     wp_enqueue_style( 'wapuubot-css', plugin_dir_url( __FILE__ ) . 'assets/css/wapuubot.css', array(), '1.0.2' );
@@ -70,6 +81,23 @@ function wapuubot_register_rest_routes() {
         'permission_callback' => function() {
             return current_user_can( 'edit_posts' );
         },
+    ) );
+
+    register_rest_route( 'wapuubot/v1', '/debug-abilities', array(
+        'methods'             => 'GET',
+        'callback'            => function() {
+            $abilities = wp_get_abilities();
+            $data = array();
+            foreach ( $abilities as $ability ) {
+                $data[] = array(
+                    'name'        => $ability->get_name(),
+                    'label'       => $ability->get_label(),
+                    'description' => $ability->get_description(),
+                );
+            }
+            return new WP_REST_Response( $data, 200 );
+        },
+        'permission_callback' => '__return_true',
     ) );
 }
 add_action( 'rest_api_init', 'wapuubot_register_rest_routes' );
@@ -292,10 +320,10 @@ function wapuubot_handle_chat( $request ) {
 			200
 		);
 
-	} catch ( Exception $e ) {
+	} catch ( Throwable $e ) {
 		return new WP_REST_Response(
 			array(
-				'response' => 'I encountered an error: ' . $e->getMessage(),
+				'response' => 'I encountered a critical error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(),
 			),
 			500
 		);

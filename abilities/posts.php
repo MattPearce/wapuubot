@@ -14,89 +14,99 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function wapuubot_register_post_abilities() {
     // Create Post Ability
-    wp_register_ability( 'wapuubot/create-post', array(
-        'label'       => 'Create Post',
-        'description' => 'Creates a new draft post in WordPress.',
-        'category'    => 'wapuubot',
-        'execute_callback' => 'wapuubot_create_post_ability',
-        'permission_callback' => function() { return current_user_can('edit_posts'); },
-        'input_schema' => array(
-            'type' => 'object',
-            'properties' => array(
-                'title' => array( 'type' => 'string', 'description' => 'The title of the post' ),
-                'content' => array( 'type' => 'string', 'description' => 'The content of the post' ),
+    if ( ! wp_has_ability( "wapuubot/create-post" ) ) {
+        wp_register_ability( "wapuubot/create-post", array(
+            'label'       => 'Create Post',
+            'description' => 'Creates a new draft post in WordPress.',
+            'category'    => 'wapuubot',
+            'execute_callback' => 'wapuubot_create_post_ability',
+            'permission_callback' => function() { return current_user_can('edit_posts'); },
+            'input_schema' => array(
+                'type' => 'object',
+                'properties' => array(
+                    'title' => array( 'type' => 'string', 'description' => 'The title of the post' ),
+                    'content' => array( 'type' => 'string', 'description' => 'The content of the post' ),
+                ),
+                'required' => array( 'title', 'content' ),
             ),
-            'required' => array( 'title', 'content' ),
-        ),
-    ) );
+        ) );
+    }
 
     // Edit Post Ability
-    wp_register_ability( 'wapuubot/edit-post', array(
-        'label'       => 'Edit Post',
-        'description' => 'Updates an existing WordPress post (title, content, or status).',
-        'category'    => 'wapuubot',
-        'execute_callback' => 'wapuubot_edit_post_ability',
-        'permission_callback' => function() { return current_user_can('edit_posts'); },
-        'input_schema' => array(
-            'type' => 'object',
-            'properties' => array(
-                'post_id' => array( 'type' => 'integer', 'description' => 'The ID of the post to edit' ),
-                'title'   => array( 'type' => 'string', 'description' => 'New title (optional)' ),
-                'content' => array( 'type' => 'string', 'description' => 'New content (optional)' ),
-                'status'  => array( 'type' => 'string', 'description' => 'New status (optional)' ),
+    if ( ! wp_has_ability( "wapuubot/edit-post" ) ) {
+        wp_register_ability( "wapuubot/edit-post", array(
+            'label'       => 'Edit Post',
+            'description' => 'Updates an existing WordPress post (title, content, or status).',
+            'category'    => 'wapuubot',
+            'execute_callback' => 'wapuubot_edit_post_ability',
+            'permission_callback' => function() { return current_user_can('edit_posts'); },
+            'input_schema' => array(
+                'type' => 'object',
+                'properties' => array(
+                    'post_id' => array( 'type' => 'integer', 'description' => 'The ID of the post to edit' ),
+                    'title'   => array( 'type' => 'string', 'description' => 'New title (optional)' ),
+                    'content' => array( 'type' => 'string', 'description' => 'New content (optional)' ),
+                    'status'  => array( 'type' => 'string', 'description' => 'New status (optional)' ),
+                ),
+                'required' => array( 'post_id' ),
             ),
-            'required' => array( 'post_id' ),
-        ),
-    ) );
+        ) );
+    }
 
     // Add Tags Ability
-    wp_register_ability( 'wapuubot/add-tags', array(
-        'label'       => 'Add Tags',
-        'description' => 'Adds tags to a WordPress post.',
-        'category'    => 'wapuubot',
-        'execute_callback' => 'wapuubot_add_tags_ability',
-        'permission_callback' => function() { return current_user_can('edit_posts'); },
-        'input_schema' => array(
-            'type' => 'object',
-            'properties' => array(
-                'post_id' => array( 'type' => 'integer', 'description' => 'The ID of the post' ),
-                'tags'    => array( 'type' => 'string', 'description' => 'Comma-separated list of tags to add' ),
+    if ( ! wp_has_ability( "wapuubot/add-tags" ) ) {
+        wp_register_ability( "wapuubot/add-tags", array(
+            'label'       => 'Add Tags',
+            'description' => 'Adds tags to a WordPress post.',
+            'category'    => 'wapuubot',
+            'execute_callback' => 'wapuubot_add_tags_ability',
+            'permission_callback' => function() { return current_user_can('edit_posts'); },
+            'input_schema' => array(
+                'type' => 'object',
+                'properties' => array(
+                    'post_id' => array( 'type' => 'integer', 'description' => 'The ID of the post' ),
+                    'tags'    => array( 'type' => 'string', 'description' => 'Comma-separated list of tags to add' ),
+                ),
+                'required' => array( 'post_id', 'tags' ),
             ),
-            'required' => array( 'post_id', 'tags' ),
-        ),
-    ) );
+        ) );
+    }
 
     // Get Post Content Ability
-    wp_register_ability( 'wapuubot/get-post-content', array(
-        'label'       => 'Get Post Content',
-        'description' => 'Retrieves details and content of a WordPress post by ID.',
-        'category'    => 'wapuubot',
-        'execute_callback' => 'wapuubot_get_post_content_ability',
-        'permission_callback' => function() { return current_user_can('edit_posts'); },
-        'input_schema' => array(
-            'type' => 'object',
-            'properties' => array(
-                'post_id' => array( 'type' => 'integer', 'description' => 'The ID of the post to retrieve' ),
+    if ( ! wp_has_ability( "wapuubot/get-post-content" ) ) {
+        wp_register_ability( "wapuubot/get-post-content", array(
+            'label'       => 'Get Post Content',
+            'description' => 'Retrieves details and content of a WordPress post by ID.',
+            'category'    => 'wapuubot',
+            'execute_callback' => 'wapuubot_get_post_content_ability',
+            'permission_callback' => function() { return current_user_can('edit_posts'); },
+            'input_schema' => array(
+                'type' => 'object',
+                'properties' => array(
+                    'post_id' => array( 'type' => 'integer', 'description' => 'The ID of the post to retrieve' ),
+                ),
+                'required' => array( 'post_id' ),
             ),
-            'required' => array( 'post_id' ),
-        ),
-    ) );
+        ) );
+    }
 
     // Search Posts Ability
-    wp_register_ability( 'wapuubot/search-posts', array(
-        'label'       => 'Search Posts',
-        'description' => 'Searches for posts by title and returns their IDs.',
-        'category'    => 'wapuubot',
-        'execute_callback' => 'wapuubot_search_posts_ability',
-        'permission_callback' => function() { return current_user_can('edit_posts'); },
-        'input_schema' => array(
-            'type' => 'object',
-            'properties' => array(
-                'search' => array( 'type' => 'string', 'description' => 'The search term (title)' ),
+    if ( ! wp_has_ability( "wapuubot/search-posts" ) ) {
+        wp_register_ability( "wapuubot/search-posts", array(
+            'label'       => 'Search Posts',
+            'description' => 'Searches for posts by title and returns their IDs.',
+            'category'    => 'wapuubot',
+            'execute_callback' => 'wapuubot_search_posts_ability',
+            'permission_callback' => function() { return current_user_can('edit_posts'); },
+            'input_schema' => array(
+                'type' => 'object',
+                'properties' => array(
+                    'search' => array( 'type' => 'string', 'description' => 'The search term (title)' ),
+                ),
+                'required' => array( 'search' ),
             ),
-            'required' => array( 'search' ),
-        ),
-    ) );
+        ) );
+    }
 }
 add_action( 'wp_abilities_api_init', 'wapuubot_register_post_abilities' );
 

@@ -14,66 +14,74 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function wapuubot_register_category_abilities() {
     // Get Categories Ability
-    wp_register_ability( 'wapuubot/get-categories', array(
-        'label'       => 'Get Categories',
-        'description' => 'Retrieves a list of all post categories.',
-        'category'    => 'wapuubot',
-        'execute_callback' => 'wapuubot_get_categories_ability',
-        'permission_callback' => function() { return current_user_can('manage_categories'); },
-        'input_schema' => array(
-            'type' => 'object',
-            'properties' => new stdClass(),
-        ),
-    ) );
+    if ( ! wp_has_ability( "wapuubot/get-categories" ) ) {
+        wp_register_ability( "wapuubot/get-categories", array(
+            'label'       => 'Get Categories',
+            'description' => 'Retrieves a list of all post categories.',
+            'category'    => 'wapuubot',
+            'execute_callback' => 'wapuubot_get_categories_ability',
+            'permission_callback' => function() { return current_user_can('manage_categories'); },
+            'input_schema' => array(
+                'type' => 'object',
+                'properties' => new stdClass(),
+            ),
+        ) );
+    }
 
     // Create Category Ability
-    wp_register_ability( 'wapuubot/create-category', array(
-        'label'       => 'Create Category',
-        'description' => 'Creates a new post category.',
-        'category'    => 'wapuubot',
-        'execute_callback' => 'wapuubot_create_category_ability',
-        'permission_callback' => function() { return current_user_can('manage_categories'); },
-        'input_schema' => array(
-            'type' => 'object',
-            'properties' => array(
-                'name' => array( 'type' => 'string', 'description' => 'The name of the new category' ),
+    if ( ! wp_has_ability( "wapuubot/create-category" ) ) {
+        wp_register_ability( "wapuubot/create-category", array(
+            'label'       => 'Create Category',
+            'description' => 'Creates a new post category.',
+            'category'    => 'wapuubot',
+            'execute_callback' => 'wapuubot_create_category_ability',
+            'permission_callback' => function() { return current_user_can('manage_categories'); },
+            'input_schema' => array(
+                'type' => 'object',
+                'properties' => array(
+                    'name' => array( 'type' => 'string', 'description' => 'The name of the new category' ),
+                ),
+                'required' => array( 'name' ),
             ),
-            'required' => array( 'name' ),
-        ),
-    ) );
+        ) );
+    }
 
     // Delete Category Ability
-    wp_register_ability( 'wapuubot/delete-category', array(
-        'label'       => 'Delete Category',
-        'description' => 'Deletes a post category by ID.',
-        'category'    => 'wapuubot',
-        'execute_callback' => 'wapuubot_delete_category_ability',
-        'permission_callback' => function() { return current_user_can('manage_categories'); },
-        'input_schema' => array(
-            'type' => 'object',
-            'properties' => array(
-                'category_id' => array( 'type' => 'integer', 'description' => 'The ID of the category to delete' ),
+    if ( ! wp_has_ability( "wapuubot/delete-category" ) ) {
+        wp_register_ability( "wapuubot/delete-category", array(
+            'label'       => 'Delete Category',
+            'description' => 'Deletes a post category by ID.',
+            'category'    => 'wapuubot',
+            'execute_callback' => 'wapuubot_delete_category_ability',
+            'permission_callback' => function() { return current_user_can('manage_categories'); },
+            'input_schema' => array(
+                'type' => 'object',
+                'properties' => array(
+                    'category_id' => array( 'type' => 'integer', 'description' => 'The ID of the category to delete' ),
+                ),
+                'required' => array( 'category_id' ),
             ),
-            'required' => array( 'category_id' ),
-        ),
-    ) );
+        ) );
+    }
 
     // Assign Category Ability
-    wp_register_ability( 'wapuubot/assign-category', array(
-        'label'       => 'Assign Category',
-        'description' => 'Assigns a category to a post.',
-        'category'    => 'wapuubot',
-        'execute_callback' => 'wapuubot_assign_category_ability',
-        'permission_callback' => function() { return current_user_can('edit_posts'); },
-        'input_schema' => array(
-            'type' => 'object',
-            'properties' => array(
-                'post_id'     => array( 'type' => 'integer', 'description' => 'The ID of the post' ),
-                'category_id' => array( 'type' => 'integer', 'description' => 'The ID of the category to assign' ),
+    if ( ! wp_has_ability( "wapuubot/assign-category" ) ) {
+        wp_register_ability( "wapuubot/assign-category", array(
+            'label'       => 'Assign Category',
+            'description' => 'Assigns a category to a post.',
+            'category'    => 'wapuubot',
+            'execute_callback' => 'wapuubot_assign_category_ability',
+            'permission_callback' => function() { return current_user_can('edit_posts'); },
+            'input_schema' => array(
+                'type' => 'object',
+                'properties' => array(
+                    'post_id'     => array( 'type' => 'integer', 'description' => 'The ID of the post' ),
+                    'category_id' => array( 'type' => 'integer', 'description' => 'The ID of the category to assign' ),
+                ),
+                'required' => array( 'post_id', 'category_id' ),
             ),
-            'required' => array( 'post_id', 'category_id' ),
-        ),
-    ) );
+        ) );
+    }
 }
 add_action( 'wp_abilities_api_init', 'wapuubot_register_category_abilities' );
 

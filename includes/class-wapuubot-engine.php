@@ -15,6 +15,14 @@ class Wapuubot_Engine {
             throw new Exception( 'Message is empty.' );
         }
 
+        // Ensure we have a user context for permission checks
+        if ( ! is_user_logged_in() ) {
+            $admins = get_users( array( 'role' => 'administrator', 'number' => 1 ) );
+            if ( ! empty( $admins ) ) {
+                wp_set_current_user( $admins[0]->ID );
+            }
+        }
+
         if ( ! class_exists( AI_Client::class ) ) {
             throw new Exception( 'AI Client library is not installed or initialized.' );
         }
@@ -34,33 +42,61 @@ class Wapuubot_Engine {
                     continue;
                 }
             }
-            if ( ! empty( $history_messages ) ) {
-                $builder->with_history( ...$history_messages );
-            }
+        }
+        if ( ! empty( $history_messages ) ) {
+            $builder->with_history( ...$history_messages );
         }
 
-        $system_instruction = 'You are Wapuubot, a helpful WordPress assistant. ' .
-            'You can manage the site by calling functions (abilities). ';
+        // Ensure abilities are registered
+        if ( ! did_action( 'wp_abilities_api_categories_init' ) ) {
+            if ( function_exists( 'wapuubot_register_categories' ) ) {
+                wapuubot_register_categories();
+            }
+            do_action( 'wp_abilities_api_categories_init' );
+        }
+        if ( ! did_action( 'wp_abilities_api_init' ) ) {
+            if ( function_exists( 'wapuubot_register_all_abilities' ) ) {
+                wapuubot_register_all_abilities();
+            }
+            do_action( 'wp_abilities_api_init' );
+        }
+
+        $abilities = wp_get_abilities();
+        $allowed_abilities = array();
+        $ability_names_for_log = array();
+        foreach ( $abilities as $ability ) {
+            // Check if the current user has permission to use this ability
+            $can = $ability->check_permissions();
+            
+            $ability_names_for_log[] = $ability->get_name() . ' (' . ( $can === true ? 'allowed' : 'denied' ) . ')';
+            if ( $can === true ) {
+                $allowed_abilities[] = $ability;
+            }
+        }
+        error_log( 'Wapuubot Engine Debug: Abilities in registry: ' . implode( ', ', $ability_names_for_log ) );
+
+        $system_instruction = 'You are Wapuubot, a powerful WordPress assistant. ' .
+            'You HAVE ACCESS to tools (abilities) that allow you to manage the site. ';
+        
+        if ( ! empty( $allowed_abilities ) ) {
+            $system_instruction .= 'Your available tools are: ' . implode( ', ', array_map( function( $a ) { return $a->get_name(); }, $allowed_abilities ) ) . '. ';
+        }
+
+        $system_instruction .= 'NEVER say you cannot create or edit posts; instead, always check your available tools and use them. ';
 
         if ( ! empty( $context['postId'] ) ) {
             $system_instruction .= 'The user is currently viewing/editing post ID ' . $context['postId'] . '. ';
         }
 
-        $system_instruction .= "Use available abilities to fulfill the user's request. " .
-            "If you need a post ID but don't have it, use the 'search-posts' ability to find it by title. " .
-            "IMPORTANT: When you call a function, I will return the result to you. Use that result to answer the user's question.";
+        $system_instruction .= "Use your abilities to fulfill the user's request. " .
+            "For example, use 'wapuubot/create-post' to create a new post. " .
+            "If you need a post ID but don't have it, use the 'wapuubot/search-posts' ability to find it by title. " .
+            "IMPORTANT: When you call a function, the result will be provided to you in the next turn. Use that result to confirm the action to the user.";
 
         $builder->using_system_instruction( $system_instruction );
 
-        // Ensure abilities are registered
-        if ( ! did_action( 'wp_abilities_api_init' ) ) {
-            do_action( 'wp_abilities_api_init' );
-        }
-
-        $abilities = wp_get_abilities();
-
-        if ( ! empty( $abilities ) ) {
-            $builder->using_abilities( ...$abilities );
+        if ( ! empty( $allowed_abilities ) ) {
+            $builder->using_abilities( ...$allowed_abilities );
         }
 
         $current_turn_history = $history_messages;
@@ -106,8 +142,8 @@ class Wapuubot_Engine {
             
             $builder = AI_Client::prompt( $last_response_message );
             $builder->using_system_instruction( $system_instruction );
-            if ( ! empty( $abilities ) ) {
-                $builder->using_abilities( ...$abilities );
+            if ( ! empty( $allowed_abilities ) ) {
+                $builder->using_abilities( ...$allowed_abilities );
             }
             
             $builder->with_history( ...$current_turn_history );
